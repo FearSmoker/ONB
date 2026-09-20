@@ -1,0 +1,26 @@
+{
+  "name": "reachinbox-email-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w apps/backend\" \"npm run worker -w apps/backend\" \"npm run dev -w apps/frontend\"",
+    "dev:backend": "npm run dev -w apps/backend",
+    "dev:frontend": "npm run dev -w apps/frontend",
+    "worker": "npm run worker -w apps/backend",
+    "infra:up": "docker compose up -d postgres redis elasticsearch",
+    "infra:down": "docker compose down",
+    "db:migrate": "npm run prisma:migrate -w apps/backend",
+    "db:generate": "npm run prisma:generate -w apps/backend",
+    "build": "npm run build --workspaces",
+    "build:backend": "npm install --include=dev && npm run build -w apps/backend && npm run prisma:migrate:deploy -w apps/backend",
+    "start:backend": "node apps/backend/dist/server.js",
+    "typecheck": "npm run typecheck --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

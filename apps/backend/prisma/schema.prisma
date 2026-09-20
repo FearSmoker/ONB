@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmailStatus {
+  SCHEDULED
+  RATE_LIMITED
+  SENDING
+  SENT
+  FAILED
+}
+
+model User {
+  id                      String          @id @default(uuid())
+  googleId                String?         @unique
+  email                   String          @unique
+  name                    String
+  avatarUrl               String?
+  slackAccessToken        String?
+  slackIncomingWebhookUrl String?
+  slackTeamId             String?
+  slackTeamName           String?
+  slackChannelId          String?
+  slackChannelName        String?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  campaigns               EmailCampaign[]
+  emails                  EmailMessage[]
+}
+
+model EmailCampaign {
+  id                    String         @id @default(uuid())
+  userId                String
+  senderEmail           String
+  subject               String
+  body                  String
+  startTime             DateTime
+  delayBetweenEmailsMs  Int
+  hourlyLimit           Int
+  totalRecipients       Int
+  createdAt             DateTime       @default(now())
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emails                EmailMessage[]
+  attachments           Attachment[]
+
+  @@index([userId, createdAt])
+}
+
+model EmailMessage {
+  id                    String       @id @default(uuid())
+  userId                String
+  campaignId            String?
+  senderEmail           String
+  recipientEmail        String
+  subject               String
+  body                  String
+  scheduledFor          DateTime
+  status                EmailStatus  @default(SCHEDULED)
+  delayBetweenEmailsMs  Int          @default(2000)
+  hourlyLimit           Int          @default(200)
+  bullJobId             String?      @unique
+  etherealMessageId     String?
+  etherealPreviewUrl    String?
+  sentAt                DateTime?
+  failedAt              DateTime?
+  lastError             String?
+  attempts              Int          @default(0)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  user                  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign              EmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  attachments           Attachment[]
+
+  @@index([userId, status, scheduledFor])
+  @@index([senderEmail, status, scheduledFor])
+  @@index([recipientEmail])
+}
+
+model Attachment {
+  id            String         @id @default(uuid())
+  emailId       String?
+  campaignId    String?
+  fileName      String
+  fileType      String
+  fileSize      Int
+  cloudinaryUrl String
+  cloudinaryId  String
+  createdAt     DateTime       @default(now())
+  email         EmailMessage?  @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  campaign      EmailCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([emailId])
+  @@index([campaignId])
+}
+
+model session {
+  sid    String   @id @db.VarChar
+  sess   Json     @db.Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], map: "IDX_session_expire")
+}
